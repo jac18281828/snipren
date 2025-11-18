@@ -1,0 +1,20 @@
+[package]
+name = "snipren"
+version = "0.1.0"
+edition = "2024"
+authors = ["John Cairns <john@2ad.com>"]
+description = "Easy rename for unix-like systems"
+license = "MIT"
+repository = "https://github.com/jac18281828/rn"
+documentation = "https://docs.rs/rn"
+readme = "README.md"
+keywords = ["rename", "unix", "filesystem", "cli"]
+categories = ["command-line-utilities", "filesystem"]
+
+[[bin]]
+name = "rn"
+path = "src/bin/rn.rs"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+regex = "1.0"
