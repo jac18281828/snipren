@@ -64,12 +64,10 @@ fn rename_file(new_name: &str, force: bool) -> Result<String, String> {
             continue;
         }
 
-        // Check if this file matches expansion pattern
-        if snipren::matches_expansion(filename, new_name) {
-            candidates.push(filename.to_string());
-        }
-        // Also check reduction (reverse: old expands to new becomes new reduces from old)
-        else if snipren::matches_expansion(new_name, filename) {
+        // Check if this file matches expansion pattern (either direction)
+        if snipren::matches_expansion(filename, new_name)
+            || snipren::matches_expansion(new_name, filename)
+        {
             candidates.push(filename.to_string());
         }
     }

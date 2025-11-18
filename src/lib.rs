@@ -23,7 +23,6 @@
  * new: route_report.csv.bak
  * -> no match (different ending)
  */
-
 pub fn matches_expansion(old: &str, new: &str) -> bool {
     // Two-pointer approach: squeeze from both ends
     // i1, i2: forward pointers
