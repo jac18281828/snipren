@@ -74,16 +74,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact-name: snipren-linux-x86_64
+            artifact-name: rn-linux-x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact-name: snipren-windows-x86_64.exe
+            artifact-name: rn-windows-x86_64.exe
           - os: macos-latest
             target: x86_64-apple-darwin
-            artifact-name: snipren-macos-x86_64
+            artifact-name: rn-macos-x86_64
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact-name: snipren-macos-aarch64
+            artifact-name: rn-macos-aarch64
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -93,20 +93,33 @@ jobs:
           toolchain: stable
           target: ${{ matrix.target }}
           override: true
+      - name: Install target
+        run: rustup target add ${{ matrix.target }}
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-cargo-
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
       - name: Prepare binary (Unix)
         if: matrix.os != 'windows-latest'
         run: |
-          cp target/${{ matrix.target }}/release/snipren ${{ matrix.artifact-name }}
+          cp target/${{ matrix.target }}/release/rn ${{ matrix.artifact-name }}
           strip ${{ matrix.artifact-name }}
       - name: Prepare binary (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          cp target/${{ matrix.target }}/release/snipren.exe ${{ matrix.artifact-name }}
+          Copy-Item target/${{ matrix.target }}/release/rn.exe ${{ matrix.artifact-name }}
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
           files: ${{ matrix.artifact-name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
