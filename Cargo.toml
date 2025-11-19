@@ -1,6 +1,6 @@
 [package]
 name = "snipren"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
 authors = ["John Cairns <john@2ad.com>"]
 description = "Easy rename for unix-like systems"
