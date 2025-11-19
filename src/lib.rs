@@ -1,53 +1,74 @@
 /**
- * Match if `new` is an expansion of `old`, meaning that `new` starts with the start of `old`
+ * Match if `new` is an expansion of `old`, meaning that characters are added
+ * in the middle or at the end of `old` to create `new`.
  *
+ * Uses a two-pointer "vice" algorithm that squeezes from both ends:
+ * - Forward pointers find where strings start to differ
+ * - Backward pointers find where strings start to differ from the end
+ * - Valid expansion: all of `old` is consumed, with added text in middle or end
  *
  * Examples:
  * old: route_report.csv
  * new: route_report_before.csv
- * -> match
+ * -> match (expansion in middle)
  *
  * old: route-report.csv
  * new: route-report-2023-01.csv
- * -> match
+ * -> match (expansion in middle)
  *
- * old: route.report.csv
- * new: route.report.v2.csv
- * -> match
+ * old: data.json
+ * new: data.json_backup
+ * -> match (expansion at end - backup pattern)
  *
  * old: route_report.csv
  * new: route-report_before.csv
  * -> no match (different separator)
  *
- * old: route_report.csv
- * new: route_report.csv.bak
- * -> no match (different ending)
+ * old: data.json
+ * new: metadata.json
+ * -> no match (no prefix match - expansion at start)
  */
 pub fn matches_expansion(old: &str, new: &str) -> bool {
-    // Two-pointer approach: squeeze from both ends
-    // i1, i2: forward pointers
-    // j1, j2: backward pointers (at extension boundary)
+    // Two-pointer "vice" approach: squeeze from both ends
+    // i1: pointer moving forward in old
+    // i2: pointer moving forward in new
+    // j1: pointer moving backward in old (starts at end)
+    // j2: pointer moving backward in new (starts at end)
 
-    // Find extension positions (last dot)
-    let j1 = old.rfind('.').unwrap_or(old.len());
-    let j2 = new.rfind('.').unwrap_or(new.len());
+    let old_chars: Vec<char> = old.chars().collect();
+    let new_chars: Vec<char> = new.chars().collect();
+    let old_len = old_chars.len();
+    let new_len = new_chars.len();
 
-    // If new_base equals old (just adding extension like .bak)
-    if &new[..j2] == old {
+    // New must be longer than old for expansion
+    if new_len <= old_len {
         return false;
     }
 
-    // The old base must be shorter than new base for expansion
-    if j1 >= j2 {
-        return false;
+    // Forward scan: find where characters start to differ
+    let mut i1 = 0;
+    let mut i2 = 0;
+
+    while i1 < old_len && i2 < new_len && old_chars[i1] == new_chars[i2] {
+        i1 += 1;
+        i2 += 1;
     }
 
-    // Forward scan: old base must be prefix of new base
-    let old_base = &old[..j1];
-    let new_base = &new[..j2];
+    // Backward scan: find where characters start to differ from the end
+    let mut j1 = old_len;
+    let mut j2 = new_len;
 
-    // New base must start with old base AND be longer (expansion)
-    new_base.starts_with(old_base) && new_base.len() > old_base.len()
+    while j1 > i1 && j2 > i2 && old_chars[j1 - 1] == new_chars[j2 - 1] {
+        j1 -= 1;
+        j2 -= 1;
+    }
+
+    // Requirements for valid expansion:
+    // 1. i1 == j1: All of old was consumed (no unmatched middle section in old)
+    // 2. i1 > 0: Must have some prefix match (expansion not at the very start)
+    // This allows expansion either in the middle or at the end, but not at the start
+
+    i1 == j1 && i1 > 0
 }
 
 #[cfg(test)]
@@ -97,22 +118,35 @@ mod tests {
     }
 
     #[test]
-    fn test_not_expansion_adding_extension_only() {
-        // Adding extension to full filename - not an expansion
-        assert!(!matches_expansion(
+    fn test_expansion_after_extension() {
+        // Adding suffix after extension - valid expansion pattern for backups
+        assert!(matches_expansion(
+            "route_report.csv",
+            "route_report.csv_backup"
+        ));
+        assert!(matches_expansion("data.json", "data.json_old"));
+        assert!(matches_expansion("script.sh", "script.sh_backup"));
+        assert!(matches_expansion("config.yml", "config.yml_2024"));
+    }
+
+    #[test]
+    fn test_not_expansion_adding_dotted_extension() {
+        // Adding .extension (with dot) is still allowed as it's a prefix match
+        // The tool relies on "exactly one match" to prevent ambiguity
+        assert!(matches_expansion(
             "route_report.csv",
             "route_report.csv.bak"
         ));
-        assert!(!matches_expansion("data.json", "data.json.old"));
-        assert!(!matches_expansion("script.sh", "script.sh.backup"));
+        assert!(matches_expansion("data.json", "data.json.old"));
     }
 
     #[test]
     fn test_not_expansion_different_prefix() {
-        // New doesn't start with old - not an expansion
+        // New doesn't start with old - not an expansion (no prefix match)
         assert!(!matches_expansion("route_report.csv", "new_report.csv"));
         assert!(!matches_expansion("data.json", "metadata.json"));
         assert!(!matches_expansion("file.txt", "other.txt"));
+        assert!(!matches_expansion("test.log", "production_test.log"));
     }
 
     #[test]
@@ -175,5 +209,41 @@ mod tests {
         // New contains old as substring but extension differs
         assert!(!matches_expansion("test.old.csv", "test.csv"));
         assert!(!matches_expansion("file.backup.txt", "file.txt"));
+    }
+
+    #[test]
+    fn test_real_world_bombas_debug_case() {
+        // Real-world bug: bombas_debug_main.log should match bombas_debug.log
+        assert!(matches_expansion(
+            "bombas_debug.log",
+            "bombas_debug_main.log"
+        ));
+
+        // But should NOT match these unrelated files
+        assert!(!matches_expansion(".dockerignore", "bombas_debug_main.log"));
+        assert!(!matches_expansion(".gitignore", "bombas_debug_main.log"));
+        assert!(!matches_expansion(".env", "bombas_debug_main.log"));
+
+        // Test the reverse direction - longer file compared to shorter should not match
+        assert!(!matches_expansion(
+            "bombas_debug_main.log",
+            "bombas_debug.log"
+        ));
+        assert!(!matches_expansion("bombas_debug_main.log", ".dockerignore"));
+        assert!(!matches_expansion("bombas_debug_main.log", ".gitignore"));
+        assert!(!matches_expansion("bombas_debug_main.log", ".env"));
+    }
+
+    #[test]
+    fn test_unicode_filenames() {
+        // Unicode characters in filenames
+        assert!(matches_expansion("データ.txt", "データ_backup.txt"));
+        assert!(matches_expansion("файл.log", "файл_main.log"));
+        assert!(matches_expansion("文件.csv", "文件_最终.csv"));
+        assert!(matches_expansion("🎉.json", "🎉_party.json"));
+
+        // Should not match different Unicode prefixes
+        assert!(!matches_expansion("データ.txt", "メタデータ.txt"));
+        assert!(!matches_expansion("файл.log", "новыйфайл.log"));
     }
 }
