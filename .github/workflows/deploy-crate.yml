@@ -58,7 +58,7 @@ jobs:
             ## Installation
 
             ```bash
-            cargo install parsm --version ${{ github.ref_name }}
+            cargo install snipren --version ${{ github.ref_name }}
             ```
 
             Or download the binaries from the assets below.
@@ -74,16 +74,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact-name: parsm-linux-x86_64
+            artifact-name: snipren-linux-x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact-name: parsm-windows-x86_64.exe
+            artifact-name: snipren-windows-x86_64.exe
           - os: macos-latest
             target: x86_64-apple-darwin
-            artifact-name: parsm-macos-x86_64
+            artifact-name: snipren-macos-x86_64
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact-name: parsm-macos-aarch64
+            artifact-name: snipren-macos-aarch64
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -98,12 +98,12 @@ jobs:
       - name: Prepare binary (Unix)
         if: matrix.os != 'windows-latest'
         run: |
-          cp target/${{ matrix.target }}/release/parsm ${{ matrix.artifact-name }}
+          cp target/${{ matrix.target }}/release/snipren ${{ matrix.artifact-name }}
           strip ${{ matrix.artifact-name }}
       - name: Prepare binary (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          cp target/${{ matrix.target }}/release/parsm.exe ${{ matrix.artifact-name }}
+          cp target/${{ matrix.target }}/release/snipren.exe ${{ matrix.artifact-name }}
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
