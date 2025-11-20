@@ -1,4 +1,4 @@
-FROM jac18281828/rust:latest
+FROM ghcr.io/jac18281828/rust:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN sudo apt-get update && \
