@@ -1,3 +1,7 @@
+0.1.5 (2025-12-09)
+
+* allow extension changes
+
 0.1.4 (2025-11-19)
 
 * docs
